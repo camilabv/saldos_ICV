@@ -1,4 +1,3 @@
-# saldos_ICV
 #--------------------------------
 #---------- Codigo ICV ----------
 
@@ -16,12 +15,20 @@ library(sqldf)
 setwd("~/trabajo1_base")
 
 
-MODALIDAD_HOMOLOGACION<- read_excel("MODALIDAD_HOMOLOGACION_SALDOS.xlsx")
-CODIGO_NOMBRE_BANCOS <- read_excel("CODIGO_NOMBRE_BANCOS.xlsx")
+
+Saldos_final <- function(tipo=1,retur1,arch1,nombre_inicial,nombre_final=paste("tbl_saldos",periodo,format(Sys.time(), "%Y%m%d"),".csv",sep = "_")){
+  # TIPO=1 Es para la tabla  de un solo mes, TIPO=2  es para la tabla de varios meses
+  # RETUR1= 2 devuelve la tabla  para seguir trabajando en R, RETUR<>2 no devuelve la tabla
+  # ARCH1=1 Genera la tabla en excel
+  # nombre inicial: 
+  #             si es TIPO=1 entonces es nombre es de tipo Ej."022019saldosindicadorpormora.xls" DEBE TENER EL PERIODO AL INICIO EN ESE ORDEN
+  #             si es TIPO=2 entonces es nombre es de tipo Ej.'*saldosindicadorpormora.xls' y tomará todos los excel con este tipo de nombre que esten en la carpeta
+  #nombre_final: No es obligatorio ponerlo. Será de la forma Ej. "nombre_archivo.csv"
+  
+  
 
 
-
-Desembolsos_interno <- function(periodo,tipo=list("Banco","CCF","CF"),nombre_arch){
+Saldos_interno <- function(periodo,tipo=list("Banco","CCF","CF"),nombre_arch){
   MODALIDAD_HOMOLOGACION <- read_excel("MODALIDAD_HOMOLOGACION_SALDOS.xlsx")
   CODIGO_NOMBRE_BANCOS <- read_excel("CODIGO_NOMBRE_BANCOS.xlsx")
   if(tipo=="Banco" | tipo=="CCF" | tipo=="CF"){
@@ -60,3 +67,90 @@ return(saldo_112018_4)
 }
 else return(cat("El Valor en Tipo no es admisible"))  
 }
+
+
+
+### parte 2 coger el libro completo
+
+Saldos_completo <- function(retur=1,arch=1,nombre_arch,nombre_final=paste("tbl_saldos",periodo,format(Sys.time(), "%Y%m%d"),".csv",sep = "_")){
+  
+  ## con arch=1 genera 2 excel, el 1 es la tabla y el 2 es la tabla agrupada   
+  ## retur=2 retorna la tabla larga  
+  periodo=paste(substr(nombre_arch,start = 3,stop = 6),substr(nombre_arch,start = 1,stop = 2),sep = "")
+  peri=periodo
+  Bancos <- Saldos_interno(periodo = peri,tipo = "Banco",nombre_arch)
+  CCF <- saldos_interno(periodo = peri,tipo = "CCF",nombre_arch)
+  CF <- saldo_interno(periodo = peri,tipo = "CF",nombre_arch)
+  completo <- rbind(Bancos,CCF,CF)
+  if(arch==1){
+    write.csv(completo, file = nombre_final,row.names=FALSE)
+  }
+  
+  if(retur==2){ return(completo)}
+  else return()
+}
+
+
+
+##### saldos varioas
+
+Saldos_varios <- function(retur=1,arch=1,nombre_comun,nombre_final=paste("tbl_saldos_varios",format(Sys.time(), "%Y%m%d"),".csv",sep = "_")){
+  # el nombre comun debe ser de la forma  Ej= '*desembolsoaprobaciones.xls'
+  
+  file.list <- list.files(pattern=nombre_comun)
+  n <- length(file.list);tabla_c <- rep(0,14)
+  for( i in 1:n){
+    tabla <- Saldos_completo(arch=2,retur=2,nombre_arch = file.list[i])
+    tabla_c <- rbind(tabla_c,tabla)
+  }
+  tabla_c <- tabla_c[-1,]
+  
+   if(arch==1){
+    write.csv(tabla_c, file = nombre_final,row.names=FALSE)
+  }
+  
+  if(retur==2){ return(tabla_c )}
+  else return()
+}  
+
+
+
+
+
+if(missing(nombre_inicial)){ return( cat("ERROR: Ingrese un nombre inicial válido"))}
+else{  
+  if(tipo==1){
+    if(missing(nombre_final)){
+      if(missing(retur1) & missing(arch1)){return(Saldos_completo(nombre_arch = nombre_inicial))}
+      if(missing(retur1)==FALSE & missing(arch1)){return(Saldos_completo(retur = retur1,nombre_arch = nombre_inicial))}
+      if(missing(retur1) & missing(arch1)==FALSE){return(Saldos_completo(arch = arch1,nombre_arch = nombre_inicial))}
+      if(missing(retur1)==FALSE & missing(arch1)==FALSE){return(Saldos_completo(retur = retur1,arch = arch1,nombre_arch = nombre_inicial))}
+    }
+    else{
+      if(missing(retur1) & missing(arch1)){return(Saldos_completo(nombre_arch = nombre_inicial,nombre_final = nombre_final))}
+      if(missing(retur1)==FALSE & missing(arch1)){return(Saldos_completo(retur = retur1,nombre_arch = nombre_inicial,nombre_final = nombre_final))}
+      if(missing(retur1) & missing(arch1)==FALSE){return(Saldos_completo(arch = arch1,nombre_arch = nombre_inicial,nombre_final = nombre_final))}
+      if(missing(retur1)==FALSE & missing(arch1)==FALSE){return(Saldos_completo(retur = retur1,arch = arch1,nombre_arch = nombre_inicial,nombre_final = nombre_final))}
+    }
+  }
+  
+  if(tipo==2){
+    if(missing(nombre_final)){
+      if(missing(retur1) & missing(arch1)){return(Saldos_varios(nombre_comun = nombre_inicial))}
+      if(missing(retur1)==FALSE & missing(arch1)){return(Saldos_varios(retur = retur1,nombre_comun = nombre_inicial))}
+      if(missing(retur1) & missing(arch1)==FALSE){return(Saldos_varios(arch = arch1,nombre_comun = nombre_inicial))}
+      if(missing(retur1)==FALSE & missing(arch1)==FALSE){return(Saldos_varios(retur = retur1,arch = arch1,nombre_comun = nombre_inicial))}
+    }
+    else{
+      if(missing(retur1) & missing(arch1)){return(Saldos_varios(nombre_arch = nombre_comun,nombre_final = nombre_final))}
+      if(missing(retur1)==FALSE & missing(arch1)){return(Saldos_varios(retur = retur1,nombre_comun = nombre_inicial,nombre_final = nombre_final))}
+      if(missing(retur1) & missing(arch1)==FALSE){return(Saldos_varios(arch = arch1,nombre_comun= nombre_inicial,nombre_final = nombre_final))}
+      if(missing(retur1)==FALSE & missing(arch1)==FALSE){return(Saldos_varios(retur = retur1,arch = arch1,nombre_comun= nombre_inicial,nombre_final = nombre_final))}
+    }
+  }  
+  if(tipo>2){cat("ERROR:Tipo solo puede tener valores 1 o 2")} 
+ }
+
+}
+
+
